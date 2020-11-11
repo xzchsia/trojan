@@ -317,6 +317,7 @@ void Service::async_accept() {
     } else {
         session = make_shared<ClientSession>(config, io_context, ssl_context);
     }
+    // 服务端accept成功之后， SSL方式需要socket().async_handshake()； 成功之后才能发起异步读写。
     socket_acceptor.async_accept(session->accept_socket(), [this, session](const boost::system::error_code error) {
         if (error == boost::asio::error::operation_aborted) {
             // got cancel signal, stop calling myself
@@ -330,6 +331,7 @@ void Service::async_accept() {
                 session->start();
             }
         }
+        // 处理完毕后继续监听，否则io_context将认为没有事件需要处理而结束运行, call-> Service::async_accept()
         async_accept();
     });
 }

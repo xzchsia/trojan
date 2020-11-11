@@ -32,7 +32,8 @@ private:
         UDP_FORWARD,
         DESTROY
     } status;
-    boost::asio::ssl::stream<boost::asio::ip::tcp::socket>in_socket;
+    // ssl 方式，以 boost::asio::ssl::stream<boost::asio::ip::tcp::socket>  代替 boost::asio::ip::tcp::socket
+    boost::asio::ssl::stream<boost::asio::ip::tcp::socket> in_socket;
     boost::asio::ip::tcp::socket out_socket;
     boost::asio::ip::udp::resolver udp_resolver;
     Authenticator *auth;

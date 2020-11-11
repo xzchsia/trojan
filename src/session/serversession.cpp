@@ -46,6 +46,8 @@ void ServerSession::start() {
         return;
     }
     auto self = shared_from_this();
+    // https使用ssl，服务端accept成功之后，需要进行socket().async_handshake()，成功之后才能发起异步读写
+    // 客户端类似，客户端connect成功之后，需要进行socket().async_handshake()，成功之后才能发起异步读写
     in_socket.async_handshake(stream_base::server, [this, self](const boost::system::error_code error) {
         if (error) {
             Log::log_with_endpoint(in_endpoint, "SSL handshake failed: " + error.message(), Log::ERROR);
@@ -135,12 +137,12 @@ void ServerSession::udp_async_write(const string &data, const udp::endpoint &end
 void ServerSession::in_recv(const string &data) {
     if (status == HANDSHAKE) {
         TrojanRequest req;
-        bool valid = req.parse(data) != -1;
+        bool valid = req.parse(data) != -1;   //协议解析，协议参考docs目录下的trojan/docs/protocol.md文档
         if (valid) {
             auto password_iterator = config.password.find(req.password);
             if (password_iterator == config.password.end()) {
                 valid = false;
-                if (auth && auth->auth(req.password)) {
+                if (auth && auth->auth(req.password)) {   // MySql授权认证
                     valid = true;
                     auth_password = req.password;
                     Log::log_with_endpoint(in_endpoint, "authenticated by authenticator (" + req.password.substr(0, 7) + ')', Log::INFO);
@@ -183,6 +185,7 @@ void ServerSession::in_recv(const string &data) {
         }
         sent_len += out_write_buf.length();
         auto self = shared_from_this();
+        // resolver是Asio的域名解析系统，它将指定的URL和服务转化为相应的ip和port的endpoint端点
         resolver.async_resolve(query_addr, query_port, [this, self, query_addr, query_port](const boost::system::error_code error, const tcp::resolver::results_type& results) {
             if (error || results.empty()) {
                 Log::log_with_endpoint(in_endpoint, "cannot resolve remote server hostname " + query_addr + ": " + error.message(), Log::ERROR);
